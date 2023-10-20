@@ -1,5 +1,7 @@
 import { run } from "./vm.mjs";
 
+const time = Date.now();
+
 function parse(str) {
   return (
     str
@@ -394,7 +396,7 @@ runTest(
   [132]
 );
 
-const bytes = 8;
+const bytes = 6;
 
 runTest(
   "Bubble sort lmao",
@@ -449,5 +451,7 @@ label getOutputLoop
   halt
 `,
   bytes * 8,
-  [5, 199, 24, 64, 4, 2, 3, 1]
+  [5, 199, 24, 64, 4, 2]
 );
+
+console.log(`Done! Took ${(Date.now() - time) / 1000} seconds!`);
