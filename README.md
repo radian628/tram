@@ -17,12 +17,12 @@ Why not?
 There are a few crucial assumptions made here to make this possible, as well as a few constraints to prevent "cheese-y" solutions:
 
 1. We can initialize all registers and all memory to whatever we want.
-2. Reads and writes are fixed-size and only read/write a single word. Misalignments are impossible.
-3. Program code and memory take up separate address spaces. Random memory reads/writes affect the latter, not the former. Reads/writes to the program code (instruction pointer increments, jumps, et cetera) are all reliable and work as normal.
+2. Reads and writes are fixed-size and only read/write a single word. All registers are a single word in size. Misalignments are impossible.
+3. Program code and memory take up separate address spaces. Random memory reads/writes affect the latter, not the former. Reads to the program code (instruction pointer increments, jumps, et cetera) are all reliable and work as normal.
 4. The only ways of accessing memory are:
    - A `load r1` instruction that moves a randomly-selected word from memory to a register `r1`.
    - A `store r1` instruction that moves a word from a register or number `r1` to a randomly-selected word in memory.
-5. We have a set, finite number of registers that we can reliably read/write to/from. Ideally, we want to minimize the number of these as much as possible, and we _especially_ don't want the number of registers having to increase as the size of memory increases.
+5. We have a set, finite number of registers that we can reliably read/write to/from. Ideally, we want to minimize the number of these as much as possible, and we _especially_ don't want the number of registers to need to increase as the amount of memory increases. Register count should be constant with respect to memory, in other words.
 
 ### Summary
 
