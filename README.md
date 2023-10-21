@@ -1,5 +1,7 @@
 # TRAM (True Random Access Memory)
 
+Credit to @pithlessly on GitHub for a lot of the underlying algorithms for this project.
+
 **What if dereferencing a pointer always gave you a random memory location?** Could you get _any_ meaningful work done with such a system? It turns out that you _can_ get a _lot_ done with such a system, and this VM is my attempt to demonstrate it.
 
 ## Why?
