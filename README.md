@@ -24,6 +24,41 @@ There are a few crucial assumptions made here to make this possible, as well as 
    - A `store r1` instruction that moves a word from a register or number `r1` to a randomly-selected word in memory.
 5. We have a set, finite number of registers that we can reliably read/write to/from. Ideally, we want to minimize the number of these as much as possible, and we _especially_ don't want the number of registers having to increase as the size of memory increases.
 
+### Summary
+
+A summary of the overall processes involved, without all of the discovery and explanation. **See below for a more detailed explanation**
+
+"Memory" consists of both the `m` entries in the random access memory (where all accesses are random) _and_ a `hole` register to effectively contain an additional single memory location. All of these locations contain a unique tag and a single data bit. These unique tags act as memory addresses and are a list of consecutive integers, starting at `0` and ending at `m`.
+
+##### Reading
+
+1. Determine the tag of what memory location you want to read from.
+2. First see if its tag matches `hole`'s tag and return `hole` if this is the case.
+3. Otherwise, repeatedly `load` memory locations randomly until you get the one with the tag you want.
+
+##### Writing
+
+1. Determine the tag of the memory location you want to write from
+2. Repeatedly perform the swap operation until `hole` contains the desired tag.
+   1. To swap, first `store` the contents of `hole`, placing it in a random memory location (as `store` does) and thus overwriting that information
+   2. Retrieve the tag you overwrote and place it in `hole`
+      1. Set up a register `countup` as a counter, initialized to `0`,
+      2. Set up another register `countdown` as a counter, initialized to `m`
+      3. Repeatedly do the following:
+         1. `load` a random memory location
+         2. See if it's equal to `countup`. If it is, increment `countup` by 1.
+         3. See if it's equal to `countdown`. If it is, decrement `countdown` by 1.
+         4. If `countup = countdown`, then both are equal to the tag you need to put in `hole`.
+   3. Retrieve the data bit you overwrote and also place it in `hole`
+      1. Back up your previous checksum (`oldChecksum`).
+      2. Sum up all the data bits of everything in memory (except for `hole`) to produce a new `checksum`.
+      3. Compare `oldChecksum` to `checksum`. They can only differ by 1 because only one bit changed.
+         - If the new `checksum` is greater than `oldChecksum`, a 0 must have become a 1, and thus the overwrote data bit is 0.
+         - If the new `checksum` is less than `oldChecksum`, a 1 must have become a 0, and thus the overwrote data bit is 1.
+         - If `checksum` equals `oldChecksum`, then nothing changed, and thus the overwrote data bit is equal to the one you set.
+3. Change the data bit in `hole` to whatever you want.
+4. Swap again to return the changed memory location to memory and ensure invariants are maintained.
+
 ### Overall Design
 
 I'd like to take you through the design of this VM, walking you through the same design decisions I made. Keep in mind that the names I use for things like registers won't exactly match up with the VM because I only now have the hindsight I do now after making the VM. Anyway, let's first consider _how_ we'd actually get work done with such a VM. Ideally, we'd be able to use this system to replicate how a _normal_ computer works&mdash; In other words, we want to be able to _read_ to the memory address that we want, and we want to be able to _write_ to the memory address that we want, instead of just reading/writing to random locations.
@@ -127,37 +162,10 @@ One important thing to note is that now that we've added this `hole` register as
 
 Now that we have `read` and `write` operations that let us _choose_ which memory we read/write to, this architecture is in theory just as capable as any load-store architecture. Sure, we can only read/write single bits at a time, but devising an algorithm for collecting multiple bits into a larger number and operating on it within registers (and vice/versa for writing) should be easy pickings compared to what we've done so far.
 
-#### Summary
+## Limitations
 
-A summary of the overall processes involved, without all of the discovery and explanation.
+Despite how flexible this system is, it does have a few frustrating limitations.
 
-"Memory" consists of both the `m` entries in the random access memory (where all accesses are random) _and_ a `hole` register to effectively contain an additional single memory location. All of these locations contain a unique tag and a single data bit. These unique tags act as memory addresses and are a list of consecutive integers, starting at `0` and ending at `m`.
-
-##### Reading
-
-1. Determine the tag of what memory location you want to read from.
-2. First see if its tag matches `hole`'s tag and return `hole` if this is the case.
-3. Otherwise, repeatedly `load` memory locations randomly until you get the one with the tag you want.
-
-##### Writing
-
-1. Determine the tag of the memory location you want to write from
-2. Repeatedly perform the swap operation until `hole` contains the desired tag.
-   1. To swap, first `store` the contents of `hole`, placing it in a random memory location (as `store` does) and thus overwriting that information
-   2. Retrieve the tag you overwrote and place it in `hole`
-      1. Set up a register `countup` as a counter, initialized to `0`,
-      2. Set up another register `countdown` as a counter, initialized to `m`
-      3. Repeatedly do the following:
-         1. `load` a random memory location
-         2. See if it's equal to `countup`. If it is, increment `countup` by 1.
-         3. See if it's equal to `countdown`. If it is, decrement `countdown` by 1.
-         4. If `countup = countdown`, then both are equal to the tag you need to put in `hole`.
-   3. Retrieve the data bit you overwrote and also place it in `hole`
-      1. Back up your previous checksum (`oldChecksum`).
-      2. Sum up all the data bits of everything in memory (except for `hole`) to produce a new `checksum`.
-      3. Compare `oldChecksum` to `checksum`. They can only differ by 1 because only one bit changed.
-         - If the new `checksum` is greater than `oldChecksum`, a 0 must have become a 1, and thus the overwrote data bit is 0.
-         - If the new `checksum` is less than `oldChecksum`, a 1 must have become a 0, and thus the overwrote data bit is 1.
-         - If `checksum` equals `oldChecksum`, then nothing changed, and thus the overwrote data bit is equal to the one you set.
-3. Change the data bit in `hole` to whatever you want.
-4. Swap again to return the changed memory location to memory and ensure invariants are maintained.
+- First, the elephant in the room: It's laughably slow. Reads are `O(m)` and writes are `O(m^3)`. This is by no means a practical architecture. Though I'm pretty sure you already knew that.
+- You can index far less memory than what you'd be able to with the entire address space offered by a given word size, since each word only contains a single bit of actual data and we can only have `2^(w - 1)` unique tags, where `w` is the word size.
+- We need a bunch of registers for storing auxiliary data associated with reading and writing, either driving up the mandatory register count or lowering the number of general-purpose registers we can do for other tasks.
